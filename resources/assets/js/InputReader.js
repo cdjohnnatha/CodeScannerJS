@@ -88,6 +88,7 @@ var InputReader = function InputReader(serverUrl, redirectUrl, allowRedirect, in
             DOM.off('click');
         }
     });
+
     this.getTypingTime = ( function ( ) { return _typingTime; } );
     this.setTypingTime = ( function ( typingTime ) { _typingTime = typingTime; } );
     this.isAllowedCharacters = ( function ( ) { return _allowedCharacters; } );
@@ -194,6 +195,7 @@ var InputReader = function InputReader(serverUrl, redirectUrl, allowRedirect, in
                         console.log(result);
                         if (result >= _timing_to_input) {
                             warningField(_input);
+
                         }
 
                     }
