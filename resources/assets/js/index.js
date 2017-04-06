@@ -5,7 +5,9 @@
 
 $( function ( ) {
 
-    var reader = new InputReader($(this), $(this).find('#reader'), '', '', false, 2);
+    var reader = new InputReader('', '', false, 2);
     reader.enableKeyDownTimer();
     reader.initKeyPress();
+
+    // $('#reader').keyboard({type:'tel'});
 } );

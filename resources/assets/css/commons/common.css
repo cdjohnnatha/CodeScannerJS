@@ -5,3 +5,7 @@
 #reader{
     text-align: center;
 }
+
+.numpadInput{
+    cursor: pointer;
+}

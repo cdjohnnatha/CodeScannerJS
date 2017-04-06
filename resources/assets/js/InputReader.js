@@ -32,9 +32,10 @@ const RIGHT_ARROW = 39;
  *
  */
 
-var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, allowRedirect, insertionDefaultNumbers) {
+var InputReader = function InputReader(serverUrl, redirectUrl, allowRedirect, insertionDefaultNumbers) {
 
-    var _input = inputField;
+    var DOM = $(document);
+    var _input = $('.InputReader');
     var _minNumbersAllowed = 8;
     var _maxNumbersAllowed = 10;
     var _focuses = false;
@@ -48,12 +49,12 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     var _allowRedirect = allowRedirect;
     var _insertionDefaultNumbers = insertionDefaultNumbers;
     var _clickFocuses = false;
-    var _intervalTypingTime = 1500;
     var _typingTime = 0;
     var _firstTime = 0;
     var _clock = new Date();
-    var _timing_to_input = 700;
+    var _timing_to_input = 800;
     var _warning_message_timer = 800;
+    var _allow_input_time = true;
 
     /**
      * Object containing the input field
@@ -89,8 +90,6 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     });
     this.getTypingTime = ( function ( ) { return _typingTime; } );
     this.setTypingTime = ( function ( typingTime ) { _typingTime = typingTime; } );
-    this.getIntervalTypingTime = ( function ( ) { return _intervalTypingTime; } );
-    this.setIntervalTypingTime = ( function ( typingInterval ) { _intervalTypingTime = typingInterval; } );
     this.isAllowedCharacters = ( function ( ) { return _allowedCharacters; } );
     this.setAllowedCharacters = ( function ( allow ) { _allowedCharacters = allow; } );
     this.getWarningMessage = ( function ( ) { return _warningMessage; } );
@@ -110,8 +109,10 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     this.blockScreenFocus = ( function ( ) { this.setFocuses(true); this.setClickFocusing(true); } );
     this.inputTimeBlocker = ( function ( ) { return _timing_to_input; })
     this.setInputTimeBlocker = ( function ( time ) { _timing_to_input = time; });
-    this.getWarningMessageTimer = ( function ( ) { return _warning_message_timer; });
-    this.setWarningMessageTimer = ( function ( time ) { _warning_message_timer = time; } )
+    this.getWarningMessageTimer = ( function ( ) { return _warning_message_timer; } );
+    this.setWarningMessageTimer = ( function ( time ) { _warning_message_timer = time; } );
+    this.isAllowedInputTime = ( function () { return _allow_input_time; } );
+    this.setAllowedInputTime = ( function ( option ) { _allow_input_time = option; } );
 
     /**
      * Send post will send the data filled from some reader at input.
@@ -142,55 +143,65 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
 
 
     this.initKeyPress = ( function ( ) {
-        DOM.on ( 'keypress', function ( e ) {
-            var keycode = e.keycode || e.which;
-            var typedValue = _input.val();
-
-            if(_input.val().length == 0 || (_input.val().length -1) == 0){
-                _clock = new Date();
+            console.log(_input.hasClass('InputReader-codebar'));
+            if(_input.hasClass('InputReader-codebar') == true){
+                _allowedCharacters = true;
+                _maxNumbersAllowed = 100;
+                _minNumbersAllowed = 3;
+                _allow_input_time = false;
+                console.log('test');
             }
+            DOM.on ( 'keypress', function ( e ) {
+                var keycode = e.keycode || e.which;
+                var typedValue = _input.val();
 
-            if ( keycode == ENTER && (typedValue.length >= _minNumbersAllowed && typedValue.length <=
-                _maxNumbersAllowed )) {
-                if( _insertionDefaultNumbers ) {
-                    if ( typedValue.length == _maxNumbersAllowed ) {
-                        typedValue = typedValue.substr( 1, typedValue.length );
+                if(_input.val().length == 0 && _allow_input_time){
+                    _clock = new Date();
+                }
+
+                if ( keycode == ENTER && (typedValue.length >= _minNumbersAllowed && typedValue.length <=
+                    _maxNumbersAllowed )) {
+                    if( _insertionDefaultNumbers ) {
+                        if ( typedValue.length == _maxNumbersAllowed ) {
+                            typedValue = typedValue.substr( 1, typedValue.length );
+                        }
+                    }
+
+                    var obj = new Object();
+                    obj.credentials = typedValue;
+                    // this.sendPost( obj );
+                    console.log('ENTER PRESSED');
+                }
+
+                //Blocking letters
+                if( ! _allowedCharacters ) {
+                    if ( keycode != BACKSPACE && keycode != GENERIC_KEYBOARD_EVENT &&
+                        keycode < CHARACTERS_BEGIN || keycode > CHARACTERS_END ) {
+                        return false;
                     }
                 }
+                console.log(typedValue);
+                if( _allow_input_time) {
+                    if (( keycode >= CHARACTERS_BEGIN && keycode <= CHARACTERS_END || keycode >= KEYPAD_BEGIN && keycode <= KEYPAD_END )
+                        || ( keycode == RIGHT_ARROW || keycode == LEFT_ARROW || keycode == ENTER )) {
+                        if (typedValue.length - 1 <= 0) {
+                            _firstTime = _clock.getTime();
 
-                var obj = new Object();
-                obj.credentials = typedValue;
-                // this.sendPost( obj );
-                console.log('ENTER PRESSED');
-            }
+                        }
+                        var finaldate = new Date().getTime();
+                        console.log("time");
+                        var result = finaldate - _firstTime;
+                        console.log(result);
+                        if (result >= _timing_to_input) {
+                            warningField(_input);
+                        }
 
-            //Blocking letters
-            if( ! _allowedCharacters ) {
-                if ( keycode != BACKSPACE && keycode != GENERIC_KEYBOARD_EVENT &&
-                    keycode < CHARACTERS_BEGIN || keycode > CHARACTERS_END ) {
+                    }
+                }
+                if( typedValue.length >= _maxNumbersAllowed && keycode != BACKSPACE && keycode != GENERIC_KEYBOARD_EVENT ){
                     return false;
                 }
-            }
-            console.log(typedValue);
-            if( ( keycode >= CHARACTERS_BEGIN && keycode <= CHARACTERS_END || keycode >= KEYPAD_BEGIN && keycode <= KEYPAD_END )
-                || ( keycode == RIGHT_ARROW || keycode == LEFT_ARROW || keycode == ENTER )){
-                if ( typedValue.length - 1 <= 0 ) {
-                    _firstTime = _clock.getTime();
-                    console.log('tiped');
-                }
-                var finaldate = new Date().getTime();
-                console.log("time");
-                var result = finaldate - _firstTime;
-                console.log(result);
-                if(result >= _timing_to_input) {
-                    warningField(_input);
-                }
-
-            }
-            if( typedValue.length >= _maxNumbersAllowed && keycode != BACKSPACE && keycode != GENERIC_KEYBOARD_EVENT ){
-                return false;
-            }
-        });
+            });
     } );
 
 
@@ -200,9 +211,7 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     this.enableKeyDownTimer = ( function ( ) {
         _input.on( 'keydown', function ( ) {
             clearTimeout( _typingTime);
-            if ( _input.val().length == 0 ) {
-                _clock = new Date();
-            }
+
         });
     } );
 
@@ -220,11 +229,9 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
             setTimeout(function(){
                 element.parent().removeClass('has-warning');
                 element.parent().find('span.warning-span').remove();
-
                 element.val('');
             }, _warning_message_timer);
         }
-
     }
 
 }
