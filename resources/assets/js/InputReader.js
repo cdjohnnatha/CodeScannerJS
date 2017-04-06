@@ -48,10 +48,12 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     var _allowRedirect = allowRedirect;
     var _insertionDefaultNumbers = insertionDefaultNumbers;
     var _clickFocuses = false;
-    var _intervalTypingTime = 800;
+    var _intervalTypingTime = 1500;
     var _typingTime = 0;
     var _firstTime = 0;
     var _clock = new Date();
+    var _timing_to_input = 700;
+    var _warning_message_timer = 800;
 
     /**
      * Object containing the input field
@@ -106,7 +108,10 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     this.isInsertedNumbers = ( function ( ) { return _insertionDefaultNumbers; } );
     this.insertionDefaultNumbers = ( function ( insertion ) { _insertionDefaultNumbers = completion; } );
     this.blockScreenFocus = ( function ( ) { this.setFocuses(true); this.setClickFocusing(true); } );
-
+    this.inputTimeBlocker = ( function ( ) { return _timing_to_input; })
+    this.setInputTimeBlocker = ( function ( time ) { _timing_to_input = time; });
+    this.getWarningMessageTimer = ( function ( ) { return _warning_message_timer; });
+    this.setWarningMessageTimer = ( function ( time ) { _warning_message_timer = time; } )
 
     /**
      * Send post will send the data filled from some reader at input.
@@ -133,22 +138,6 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
     } );
 
 
-    // Function will verify in intervals if the user stopped to typing and check the interval time between stop and hit up;
-    this.startCheckTypingSpeed = ( function ( ) {
-        console.log('calling!');
-        // clear the time typing if called some event handler keyup;
-        clearTimeout ( _typingTime );
-        _typingTime = setTimeout( function(){
-            if( _input.val().length != _maxNumbersAllowed ) {
-                _clock = new Date();
-                var finaldate = _clock.getTime();
-                console.log("time");
-                console.log(finaldate - _firstTime);
-            }
-            console.log("done");
-        }, _intervalTypingTime );
-    } );
-
 
 
 
@@ -157,6 +146,9 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
             var keycode = e.keycode || e.which;
             var typedValue = _input.val();
 
+            if(_input.val().length == 0 || (_input.val().length -1) == 0){
+                _clock = new Date();
+            }
 
             if ( keycode == ENTER && (typedValue.length >= _minNumbersAllowed && typedValue.length <=
                 _maxNumbersAllowed )) {
@@ -166,8 +158,6 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
                     }
                 }
 
-                var checkEnter = _clock.getTime();
-                console.log('time: ' + (checkEnter -_clock.getTime()));
                 var obj = new Object();
                 obj.credentials = typedValue;
                 // this.sendPost( obj );
@@ -188,15 +178,14 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
                     _firstTime = _clock.getTime();
                     console.log('tiped');
                 }
-                clearTimeout ( _typingTime );
-                _typingTime = setTimeout( function(){
-                    if( _input.val().length != _maxNumbersAllowed) {
-                        var finaldate = _clock.getTime();
-                        console.log("time");
-                        console.log(finaldate - _firstTime);
-                    }
-                    console.log("done");
-                }, _intervalTypingTime );
+                var finaldate = new Date().getTime();
+                console.log("time");
+                var result = finaldate - _firstTime;
+                console.log(result);
+                if(result >= _timing_to_input) {
+                    warningField(_input);
+                }
+
             }
             if( typedValue.length >= _maxNumbersAllowed && keycode != BACKSPACE && keycode != GENERIC_KEYBOARD_EVENT ){
                 return false;
@@ -223,7 +212,22 @@ var InputReader = function InputReader(DOM, inputField, serverUrl, redirectUrl, 
 
     /** DEFAULT CALLINGS **/
     this.blockScreenFocus();
+    function warningField(element){
+        if(element.parent().hasClass('has-warning') == false){
+            var spanError = $('<span class="warning-span">Its not allowed</span>').addClass('help-block');
+            element.parent().addClass("has-warning").append(spanError);
 
+            setTimeout(function(){
+                element.parent().removeClass('has-warning');
+                element.parent().find('span.warning-span').remove();
+
+                element.val('');
+            }, _warning_message_timer);
+        }
+
+    }
 
 }
+
+
 
